@@ -3,34 +3,54 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Seamo — Returning to app</title>
+  <title>Finish sign-in in Seamo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:wght@500&display=swap" rel="stylesheet">
   <style>
-    *{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#1C1C1E;color:#fff;display:flex;align-items:center;justify-content:center;min-height:100vh;text-align:center}
-    .card{max-width:400px;padding:48px 32px}
-    h1{font-size:20px;font-weight:600;margin-bottom:8px}
-    p{font-size:14px;color:#98989D;line-height:1.5;margin-bottom:24px}
-    .btn{display:inline-block;padding:10px 28px;background:#fff;color:#1C1C1E;font-size:14px;font-weight:600;border:none;border-radius:8px;cursor:pointer;text-decoration:none;transition:background .15s}
-    .btn:hover{background:#E5E5EA}
-    .status{margin-top:16px;font-size:12px;color:#636366}
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #1C1C1E;
+      color: #F0EFEB;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      text-align: center;
+      -webkit-font-smoothing: antialiased;
+    }
+    .card { max-width: 420px; padding: 48px 36px; }
+    .logo { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-bottom: 26px; }
+    .logo svg { width: 60px; height: 60px; }
+    .wordmark { font-family: 'Newsreader', Georgia, serif; font-size: 20px; font-weight: 500; color: #F0EFEB; letter-spacing: 0.01em; }
+    h1 { font-size: 22px; font-weight: 600; line-height: 1.3; margin-bottom: 12px; }
+    p { font-size: 14px; color: #98989D; line-height: 1.6; margin-bottom: 28px; }
+    .btn {
+      display: inline-block; padding: 11px 30px; background: #fff; color: #0B0B0B;
+      font-size: 14px; font-weight: 600; border: none; border-radius: 9px; cursor: pointer;
+      text-decoration: none; transition: background .15s;
+    }
+    .btn:hover { background: #E1E1D9; }
   </style>
 </head>
 <body>
   <div class="card">
-    <h1>Sign-in complete</h1>
-    <p id="msg">Returning to Seamo…</p>
-    <a class="btn" id="open-btn" href="seamo://oauth-callback" style="display:none">Open Seamo</a>
-    <div class="status" id="status"></div>
+    <div class="logo">
+      <svg viewBox="0 0 60 60" fill="none" aria-hidden="true">
+        <circle cx="30" cy="30" r="28" stroke="rgba(255,255,255,0.22)" stroke-width="2"/>
+        <path d="M13 30 C 19 13, 25 13, 30 30 S 41 47, 47 30" stroke="#F0EFEB" stroke-width="3" stroke-linecap="round" fill="none"/>
+      </svg>
+      <span class="wordmark">Seamo</span>
+    </div>
+    <h1>Finish sign-in in the Seamo app</h1>
+    <p>Seamo should open automatically. If it doesn't, select Open Seamo. You can close this window once the app has opened.</p>
+    <a class="btn" id="open-btn" href="seamo://oauth-callback">Open Seamo</a>
   </div>
   <script>
-    window.location.href='seamo://oauth-callback';
-    setTimeout(function(){
-      if(document.visibilityState!=='hidden'){
-        document.getElementById('open-btn').style.display='inline-block';
-        document.getElementById('msg').textContent='Click below if Seamo didn’t open automatically.';
-        document.getElementById('status').textContent='You can close this tab after returning to the app.';
-      }
-    },2000);
+    // Fire the deep link automatically on load (same behavior as before); the button
+    // above is the manual fallback if the OS didn't switch to the app.
+    window.location.href = 'seamo://oauth-callback';
   </script>
 </body>
 </html>
