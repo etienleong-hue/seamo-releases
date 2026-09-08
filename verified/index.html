@@ -7,130 +7,30 @@
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
     body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#1C1C1E;color:#fff;display:flex;align-items:center;justify-content:center;min-height:100vh;text-align:center}
-    .card{max-width:420px;padding:48px 32px}
-    .spinner{width:28px;height:28px;border:3px solid #3A3A3C;border-top-color:#fff;border-radius:50%;margin:0 auto 20px;animation:spin .8s linear infinite}
-    @keyframes spin{to{transform:rotate(360deg)}}
+    .card{max-width:400px;padding:48px 32px}
     h1{font-size:20px;font-weight:600;margin-bottom:8px}
     p{font-size:14px;color:#98989D;line-height:1.5;margin-bottom:24px}
     .btn{display:inline-block;padding:10px 28px;background:#fff;color:#1C1C1E;font-size:14px;font-weight:600;border:none;border-radius:8px;cursor:pointer;text-decoration:none;transition:background .15s}
     .btn:hover{background:#E5E5EA}
-    .hidden{display:none}
-    .status{margin-top:16px;font-size:12px;color:#636366;word-break:break-word}
+    .status{margin-top:16px;font-size:12px;color:#636366}
   </style>
 </head>
 <body>
   <div class="card">
-    <div class="spinner" id="spinner"></div>
-    <h1 id="title">Completing sign-in…</h1>
-    <p id="msg">Finishing up with Seamo. This only takes a moment.</p>
-    <a class="btn hidden" id="open-btn" href="#">Open Seamo</a>
-    <button class="btn hidden" id="retry-btn" type="button">Try again</button>
+    <h1>Sign-in complete</h1>
+    <p id="msg">Returning to Seamo…</p>
+    <a class="btn" id="open-btn" href="seamo://oauth-callback" style="display:none">Open Seamo</a>
     <div class="status" id="status"></div>
   </div>
-
-  <!-- Clerk hotload bundle auto-constructs window.Clerk, reading the publishable key
-       from window.__clerk_publishable_key. Set it (from ?pk=) BEFORE the SDK loads. -->
   <script>
-    window.__clerk_publishable_key = new URLSearchParams(location.search).get('pk') || '';
-  </script>
-  <script src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@6.25.2/dist/clerk.browser.js"></script>
-  <script>
-    (function () {
-      var $ = function (id) { return document.getElementById(id); };
-      var setState = function (title, msg) { $('title').textContent = title; $('msg').textContent = msg; };
-      var setStatus = function (s) { $('status').textContent = s || ''; };
-
-      // Build the deep-link URL that hands the session back to the desktop app.
-      function callbackUrl(params) {
-        var q = Object.keys(params)
-          .filter(function (k) { return params[k] != null && params[k] !== ''; })
-          .map(function (k) { return k + '=' + encodeURIComponent(params[k]); })
-          .join('&');
-        return 'seamo://oauth-callback' + (q ? ('?' + q) : '');
+    window.location.href='seamo://oauth-callback';
+    setTimeout(function(){
+      if(document.visibilityState!=='hidden'){
+        document.getElementById('open-btn').style.display='inline-block';
+        document.getElementById('msg').textContent='Click below if Seamo didn’t open automatically.';
+        document.getElementById('status').textContent='You can close this tab after returning to the app.';
       }
-
-      function bounce(url) {
-        // Fire the deep link (routes to the desktop app's open-url handler).
-        window.location.href = url;
-        // Reveal a manual button in case the OS didn't auto-open the app.
-        setTimeout(function () {
-          if (document.visibilityState !== 'hidden') {
-            $('spinner').classList.add('hidden');
-            $('open-btn').setAttribute('href', url);
-            $('open-btn').classList.remove('hidden');
-            setState('Sign-in complete!', 'Click below if Seamo didn’t open automatically.');
-            setStatus('You can close this tab after returning to the app.');
-          }
-        }, 2000);
-      }
-
-      function fail(reason) {
-        $('spinner').classList.add('hidden');
-        setState('Couldn’t finish sign-in', 'Something went wrong completing your Google sign-in.');
-        setStatus(reason ? String(reason) : '');
-        $('retry-btn').classList.remove('hidden');
-        $('retry-btn').onclick = function () { location.reload(); };
-      }
-
-      // Resolve the OAuth result IN THE BROWSER (where the OAuth security context /
-      // cookies live) — this is the whole point: a signUp `transfer` only works here,
-      // never from the desktop Clerk client. Then hand the session token back to the
-      // app via the seamo:// deep link.
-      async function run() {
-        if (!window.__clerk_publishable_key) { fail('Missing Clerk key (no ?pk= in the URL).'); return; }
-        if (!window.Clerk) { fail('Could not load the sign-in service.'); return; }
-        var clerk = window.Clerk;
-        try {
-          await clerk.load({});
-        } catch (e) { fail('Clerk failed to load: ' + (e && e.message ? e.message : e)); return; }
-
-        try {
-          // 1) Best-effort: let Clerk's own redirect handler finish the flow if it can.
-          if (!clerk.session && typeof clerk.handleRedirectCallback === 'function') {
-            try { await clerk.handleRedirectCallback({}, function () { /* swallow navigation */ }); }
-            catch (_e) { /* fall through to manual completion */ }
-          }
-
-          // 2) Manual completion (the reliable path).
-          if (!clerk.session) {
-            var si = clerk.client && clerk.client.signIn;
-            var su = clerk.client && clerk.client.signUp;
-            var ffv = si && si.firstFactorVerification && si.firstFactorVerification.status;
-            if (si && si.status === 'complete' && si.createdSessionId) {
-              // Existing user — the signIn completed.
-              await clerk.setActive({ session: si.createdSessionId });
-            } else if (ffv === 'transferable') {
-              // NEW / re-registered identity — CREATE the user by transferring the OAuth
-              // verification to a signUp. THIS is what fails on the desktop and works here.
-              var s2 = await clerk.client.signUp.create({ transfer: true });
-              if (s2 && s2.status === 'complete' && s2.createdSessionId) {
-                await clerk.setActive({ session: s2.createdSessionId });
-              }
-            } else if (su && su.status === 'complete' && su.createdSessionId) {
-              // Fallback — an in-progress signUp already completed.
-              await clerk.setActive({ session: su.createdSessionId });
-            }
-          }
-
-          if (!clerk.session) { fail('No active session after completing the OAuth flow.'); return; }
-
-          var token = null;
-          try { token = await clerk.session.getToken(); } catch (_e) { token = null; }
-          var u = clerk.user || {};
-          var email = (u.primaryEmailAddress && u.primaryEmailAddress.emailAddress)
-            || (u.emailAddresses && u.emailAddresses[0] && u.emailAddresses[0].emailAddress) || '';
-          var tier = (u.publicMetadata && u.publicMetadata.tier) || 'free';
-          var userId = u.id || '';
-
-          setState('Sign-in complete!', 'Returning to Seamo…');
-          bounce(callbackUrl({ token: token, email: email, tier: tier, userId: userId }));
-        } catch (e) {
-          fail(e && e.message ? e.message : String(e));
-        }
-      }
-
-      run();
-    })();
+    },2000);
   </script>
 </body>
 </html>
