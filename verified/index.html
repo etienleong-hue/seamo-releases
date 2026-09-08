@@ -3,206 +3,34 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Seamo — Completing sign-in</title>
+  <title>Seamo — Returning to app</title>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
     body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#1C1C1E;color:#fff;display:flex;align-items:center;justify-content:center;min-height:100vh;text-align:center}
-    .card{max-width:420px;padding:48px 32px}
+    .card{max-width:400px;padding:48px 32px}
     h1{font-size:20px;font-weight:600;margin-bottom:8px}
     p{font-size:14px;color:#98989D;line-height:1.5;margin-bottom:24px}
     .btn{display:inline-block;padding:10px 28px;background:#fff;color:#1C1C1E;font-size:14px;font-weight:600;border:none;border-radius:8px;cursor:pointer;text-decoration:none;transition:background .15s}
     .btn:hover{background:#E5E5EA}
     .status{margin-top:16px;font-size:12px;color:#636366}
-    .error{color:#FF453A;font-size:13px;margin-top:12px;display:none}
-    .spinner{display:inline-block;width:20px;height:20px;border:2px solid #555;border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;margin-bottom:16px}
-    @keyframes spin{to{transform:rotate(360deg)}}
-    #debug{text-align:left;font-size:11px;color:#555;margin-top:24px;max-height:200px;overflow:auto;word-break:break-all;display:none}
   </style>
 </head>
 <body>
   <div class="card">
-    <div class="spinner" id="spinner"></div>
-    <h1 id="title">Completing sign-in…</h1>
-    <p id="msg">Please wait while we finish setting up your account.</p>
-    <a class="btn" id="open-btn" href="#" style="display:none">Open Seamo</a>
-    <div class="error" id="error"></div>
+    <h1>Sign-in complete</h1>
+    <p id="msg">Returning to Seamo…</p>
+    <a class="btn" id="open-btn" href="seamo://oauth-callback" style="display:none">Open Seamo</a>
     <div class="status" id="status"></div>
-    <div id="debug"></div>
   </div>
-
   <script>
-    // ── helpers ──
-    const $ = id => document.getElementById(id);
-    const log = (...args) => {
-      console.log('[seamo-verified]', ...args);
-      const d = $('debug');
-      d.style.display = 'block';
-      d.textContent += args.join(' ') + '\n';
-    };
-
-    function showSuccess(deepLinkUrl) {
-      $('spinner').style.display = 'none';
-      $('title').textContent = 'Sign-in complete!';
-      $('msg').textContent = 'Returning to Seamo…';
-      $('open-btn').href = deepLinkUrl;
-      $('open-btn').style.display = 'inline-block';
-      // Auto-trigger the deep link
-      window.location.href = deepLinkUrl;
-      setTimeout(() => {
-        if (document.visibilityState !== 'hidden') {
-          $('msg').textContent = 'Click below if Seamo didn\'t open automatically.';
-          $('status').textContent = 'You can close this tab after returning to the app.';
-        }
-      }, 2000);
-    }
-
-    function showError(message) {
-      $('spinner').style.display = 'none';
-      $('title').textContent = 'Couldn\'t finish sign-in';
-      $('msg').textContent = message;
-      $('error').style.display = 'block';
-      $('error').textContent = 'If this keeps happening, try signing in with email instead.';
-      // Still offer the plain deep link as fallback
-      $('open-btn').href = 'seamo://oauth-callback';
-      $('open-btn').textContent = 'Return to Seamo';
-      $('open-btn').style.display = 'inline-block';
-    }
-
-    // ── main flow ──
-    (async function() {
-      try {
-        // 1. Get publishable key from URL params
-        const params = new URLSearchParams(window.location.search);
-        const pk = params.get('pk');
-        log('pk:', pk ? pk.substring(0, 20) + '...' : 'MISSING');
-
-        if (!pk) {
-          showError('Missing publishable key. Please try signing in again.');
-          return;
-        }
-
-        // 2. Set the key for Clerk's hotload bundle
-        window.__clerk_publishable_key = pk;
-
-        // 3. Load Clerk JS from CDN (same version as the app: 6.25.2)
-        log('loading Clerk JS...');
-        await new Promise((resolve, reject) => {
-          const script = document.createElement('script');
-          script.src = 'https://cdn.jsdelivr.net/npm/@clerk/clerk-js@6.25.2/dist/clerk.browser.js';
-          script.onload = resolve;
-          script.onerror = () => reject(new Error('Failed to load Clerk JS'));
-          document.head.appendChild(script);
-        });
-        log('Clerk JS loaded');
-
-        // 4. Initialize Clerk
-        const clerk = window.Clerk;
-        if (!clerk) {
-          showError('Clerk failed to initialize.');
-          return;
-        }
-        await clerk.load({});
-        log('clerk.load() done');
-        log('hasSession:', !!clerk.session);
-        log('hasUser:', !!clerk.user);
-        log('signIn status:', clerk.client?.signIn?.status);
-        log('signIn ffv:', clerk.client?.signIn?.firstFactorVerification?.status);
-        log('signUp status:', clerk.client?.signUp?.status);
-        log('signUp email:', clerk.client?.signUp?.emailAddress);
-
-        // 5. Check if we already have an active session (existing user flow)
-        if (clerk.session && clerk.user) {
-          log('CASE 0: already have active session');
-          const token = await clerk.session.getToken();
-          const email = clerk.user.primaryEmailAddress?.emailAddress || '';
-          const tier = clerk.user.publicMetadata?.tier || 'free';
-          const userId = clerk.user.id;
-          log('success — email:', email, 'tier:', tier);
-          const deepLink = `seamo://oauth-callback?token=${encodeURIComponent(token)}&email=${encodeURIComponent(email)}&tier=${encodeURIComponent(tier)}&userId=${encodeURIComponent(userId)}`;
-          showSuccess(deepLink);
-          return;
-        }
-
-        // 6. Check signIn status
-        const signIn = clerk.client?.signIn;
-        const signUp = clerk.client?.signUp;
-        const ffvStatus = signIn?.firstFactorVerification?.status;
-
-        if (signIn?.status === 'complete' && signIn?.createdSessionId) {
-          // CASE 1: signIn complete (existing user)
-          log('CASE 1: signIn complete');
-          await clerk.setActive({ session: signIn.createdSessionId });
-          const token = await clerk.session.getToken();
-          const email = clerk.user.primaryEmailAddress?.emailAddress || '';
-          const tier = clerk.user.publicMetadata?.tier || 'free';
-          const userId = clerk.user.id;
-          log('success — email:', email);
-          const deepLink = `seamo://oauth-callback?token=${encodeURIComponent(token)}&email=${encodeURIComponent(email)}&tier=${encodeURIComponent(tier)}&userId=${encodeURIComponent(userId)}`;
-          showSuccess(deepLink);
-          return;
-        }
-
-        if (ffvStatus === 'transferable') {
-          // CASE 2: transferable — THE KEY FIX
-          // The OAuth verified the Google identity but the user doesn't exist yet.
-          // signUp.create({ transfer: true }) creates the user using the verified OAuth context.
-          // THIS WORKS HERE because we're in the browser that has the OAuth cookies.
-          log('CASE 2: transferable — calling signUp.create({ transfer: true })');
-          try {
-            const result = await clerk.client.signUp.create({ transfer: true });
-            log('transfer result — status:', result.status, 'sessionId:', result.createdSessionId, 'userId:', result.createdUserId);
-
-            if (result.createdSessionId) {
-              await clerk.setActive({ session: result.createdSessionId });
-              const token = await clerk.session.getToken();
-              const email = clerk.user.primaryEmailAddress?.emailAddress || '';
-              const tier = clerk.user.publicMetadata?.tier || 'free';
-              const userId = clerk.user.id;
-              log('transfer SUCCESS — email:', email, 'tier:', tier);
-              const deepLink = `seamo://oauth-callback?token=${encodeURIComponent(token)}&email=${encodeURIComponent(email)}&tier=${encodeURIComponent(tier)}&userId=${encodeURIComponent(userId)}`;
-              showSuccess(deepLink);
-              return;
-            }
-
-            if (result.status === 'missing_requirements') {
-              log('transfer missing_requirements:', JSON.stringify(result.missingFields));
-              showError('Additional information required. Please sign in with email instead.');
-              return;
-            }
-
-            showError('Unexpected status: ' + result.status);
-          } catch (transferErr) {
-            log('transfer ERROR:', transferErr.message, JSON.stringify(transferErr.errors || []));
-            showError('Could not complete account setup: ' + transferErr.message);
-          }
-          return;
-        }
-
-        if (signUp?.status === 'complete' && signUp?.createdSessionId) {
-          // CASE 3: signUp already completed
-          log('CASE 3: signUp complete');
-          await clerk.setActive({ session: signUp.createdSessionId });
-          const token = await clerk.session.getToken();
-          const email = clerk.user.primaryEmailAddress?.emailAddress || '';
-          const tier = clerk.user.publicMetadata?.tier || 'free';
-          const userId = clerk.user.id;
-          log('success — email:', email);
-          const deepLink = `seamo://oauth-callback?token=${encodeURIComponent(token)}&email=${encodeURIComponent(email)}&tier=${encodeURIComponent(tier)}&userId=${encodeURIComponent(userId)}`;
-          showSuccess(deepLink);
-          return;
-        }
-
-        // No case matched
-        log('NO CASE MATCHED');
-        log('signIn full:', JSON.stringify(signIn));
-        log('signUp full:', JSON.stringify(signUp));
-        showError('Could not detect a completed sign-in. Please try again.');
-
-      } catch (err) {
-        log('FATAL ERROR:', err.message, err.stack);
-        showError('Something went wrong: ' + err.message);
+    window.location.href='seamo://oauth-callback';
+    setTimeout(function(){
+      if(document.visibilityState!=='hidden'){
+        document.getElementById('open-btn').style.display='inline-block';
+        document.getElementById('msg').textContent='Click below if Seamo didn’t open automatically.';
+        document.getElementById('status').textContent='You can close this tab after returning to the app.';
       }
-    })();
+    },2000);
   </script>
 </body>
 </html>
