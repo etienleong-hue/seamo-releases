@@ -11,36 +11,24 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #1C1C1E;
-      color: #F0EFEB;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-      text-align: center;
-      -webkit-font-smoothing: antialiased;
+      background: #1C1C1E; color: #F0EFEB;
+      display: flex; align-items: center; justify-content: center; min-height: 100vh;
+      text-align: center; -webkit-font-smoothing: antialiased;
     }
     .card { max-width: 420px; padding: 48px 36px; }
-    .logo { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-bottom: 26px; }
-    .logo svg { width: 60px; height: 60px; }
+    .logo { display: flex; flex-direction: column; align-items: center; gap: 12px; margin-bottom: 26px; }
+    .logo img { width: 60px; height: 60px; object-fit: contain; }
     .wordmark { font-family: 'Newsreader', Georgia, serif; font-size: 20px; font-weight: 500; color: #F0EFEB; letter-spacing: 0.01em; }
     h1 { font-size: 22px; font-weight: 600; line-height: 1.3; margin-bottom: 12px; }
     p { font-size: 14px; color: #98989D; line-height: 1.6; margin-bottom: 28px; }
-    .btn {
-      display: inline-block; padding: 11px 30px; background: #fff; color: #0B0B0B;
-      font-size: 14px; font-weight: 600; border: none; border-radius: 9px; cursor: pointer;
-      text-decoration: none; transition: background .15s;
-    }
+    .btn { display: inline-block; padding: 11px 30px; background: #fff; color: #0B0B0B; font-size: 14px; font-weight: 600; border: none; border-radius: 9px; cursor: pointer; text-decoration: none; transition: background .15s; }
     .btn:hover { background: #E1E1D9; }
   </style>
 </head>
 <body>
   <div class="card">
     <div class="logo">
-      <svg viewBox="0 0 60 60" fill="none" aria-hidden="true">
-        <circle cx="30" cy="30" r="28" stroke="rgba(255,255,255,0.22)" stroke-width="2"/>
-        <path d="M13 30 C 19 13, 25 13, 30 30 S 41 47, 47 30" stroke="#F0EFEB" stroke-width="3" stroke-linecap="round" fill="none"/>
-      </svg>
+      <img src="data:image/png;base64,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" alt="Seamo" />
       <span class="wordmark">Seamo</span>
     </div>
     <h1>Finish sign-in in the Seamo app</h1>
@@ -49,8 +37,8 @@
   </div>
   <script>
     // Fire the deep link automatically on load (same behavior as before); the button
-    // above is the manual fallback if the OS didn't switch to the app.
-    window.location.href = 'seamo://oauth-callback';
+    // above is the manual fallback if the OS did not switch to the app.
+    window.location.href = "seamo://oauth-callback";
   </script>
 </body>
 </html>
